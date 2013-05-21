@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: learn
 title: PouchDB, the JavaScript Database that Syncs!
 ---
 
@@ -228,7 +228,7 @@ Retrieves a document, specified by `docid`.
 
 
     db.get("foo", {revs: true, revs_info: true}, function(err, res) {
-      // Result: 
+      // Result:
       // {
       //   "_id": "foo",
       //   "_rev": "2-7051cbe5c8faecd085a3fa619e6e6337",
