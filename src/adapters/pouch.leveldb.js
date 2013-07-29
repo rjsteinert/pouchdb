@@ -11,7 +11,8 @@ var path = require('path');
 var fs = require('fs');
 var crypto = require('crypto');
 var EventEmitter = require('events').EventEmitter;
-var levelup = require('levelup');
+
+var levelup = require('level');
 
 var error = function(callback, message) {
   return process.nextTick(function() {
@@ -48,17 +49,28 @@ function dbError(callback) {
 }
 
 var LevelPouch = function(opts, callback) {
+
   var opened = false;
   var api = {};
   var update_seq = 0;
   var doc_count = 0;
   var stores = {};
   var name = opts.name;
+  var uuid;
   var change_emitter = CHANGES[name] || new EventEmitter();
 
   CHANGES[name] = change_emitter;
 
+  var uuidPath = opts.name + '.uuid';
+  if (!fs.existsSync(uuidPath)) {
+    uuid = Pouch.uuid();
+    fs.writeFileSync(uuidPath, uuid);
+  } else {
+    uuid = fs.readFileSync(uuidPath);
+  }
+
   function initstore(store_name, encoding) {
+
     var dbpath = path.resolve(path.join(opts.name, store_name));
     opts.valueEncoding = encoding || 'json';
 
@@ -151,13 +163,23 @@ var LevelPouch = function(opts, callback) {
     return opts.name;
   };
 
-  api._info = function(callback) {
-    return call(callback, null, {
-      db_name: opts.name,
-      doc_count: doc_count,
-      update_seq: update_seq
-    });
-  };
+
+   api._info = function(callback) {
+
+     stores[BY_SEQ_STORE].get(DOC_COUNT_KEY, function(err, _doc_count) {
+       if (err) { _doc_count = doc_count; }
+
+       stores[BY_SEQ_STORE].get(UPDATE_SEQ_KEY, function(err, _update_seq) {
+         if (err) { _update_seq = update_seq; }
+
+         return call(callback, null, {
+           db_name: opts.name,
+           doc_count: _doc_count,
+           update_seq: _update_seq
+         });
+       });
+     });
+   };
 
   api._get = function(id, opts, callback) {
     stores[DOC_STORE].get(id, function(err, metadata) {
@@ -341,7 +363,7 @@ var LevelPouch = function(opts, callback) {
         doc.metadata.rev_map[doc.metadata.rev] = doc.metadata.seq;
 
         stores[BY_SEQ_STORE].put(doc.metadata.seq, doc.data, function(err) {
-          if (err) {
+          if (err && Pouch.DEBUG) {
             return console.error(err);
           }
 
@@ -392,7 +414,7 @@ var LevelPouch = function(opts, callback) {
         }
 
         stores[ATTACH_STORE].put(digest, newAtt, function(err) {
-          if (err) {
+          if (err && Pouch.DEBUG) {
             return console.error(err);
           }
           // do not try to store empty attachments
@@ -401,7 +423,7 @@ var LevelPouch = function(opts, callback) {
           }
           stores[ATTACH_BINARY_STORE].put(digest, data, function(err) {
             callback(err);
-            if (err) {
+            if (err && Pouch.DEBUG) {
               return console.error(err);
             }
           });
@@ -522,7 +544,9 @@ var LevelPouch = function(opts, callback) {
     });
     docstream.on('error', function(err) {
       // TODO: handle error
-      console.error(err);
+      if (Pouch.DEBUG) {
+        console.error(err);
+      }
     });
     docstream.on('end', function() {
     });
@@ -606,7 +630,9 @@ var LevelPouch = function(opts, callback) {
         })
         .on('error', function(err) {
           // TODO: handle errors
-          console.error(err);
+          if (Pouch.DEBUG) {
+            console.error(err);
+          }
         })
         .on('close', function() {
           var filter = Pouch.utils.filterChange(opts);
@@ -618,6 +644,13 @@ var LevelPouch = function(opts, callback) {
           if (opts.continuous && !opts.cancelled) {
             change_emitter.on('change', changeListener);
           }
+          results = results.sort(function(a, b) {
+            if (descending) {
+              return b.seq - a.seq;
+            } else {
+              return a.seq - b.seq;
+            }
+          });
           Pouch.utils.processChanges(opts, results, last_seq);
         });
     }
@@ -795,6 +828,11 @@ LevelPouch.destroy = function(name, callback) {
   });
 
   function done() {
+    var uuidPath = name + '.uuid';
+    if (fs.existsSync(uuidPath)) {
+      fs.unlinkSync(uuidPath);
+    }
+
     rmdir(name, function(err) {
       if (err && err.code === 'ENOENT') {
         // TODO: MISSING_DOC name is somewhat misleading in this context

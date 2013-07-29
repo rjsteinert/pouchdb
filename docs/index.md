@@ -3,20 +3,65 @@ layout: default
 title: PouchDB, the JavaScript Database that Syncs!
 ---
 
-# PouchDB
+<h1 id="the_database_that_syncs">The Database that Syncs!</h1>
 
-PouchDB is a JavaScript library that allows you to store and query data for web applications that need to work offline, and sync with an online database when you are online.
+<div id="home1">
 
-### The Browser Database that Syncs
+<section>
 
-Based on the work of Apache CouchDB, PouchDB provides a simple API in which to store and retrieve JSON objects, due to the similiar API, and CouchDB's HTTP API it is possible to sync data that is stored in your local PouchDB to an online CouchDB as well as syncing data from CouchDB down to PouchDB (you can even sync between 2 PouchDB databases).
+<p>PouchDB is an Open Source JavaScript Database inspired by <a href="http://couchdb.apache.org/">Apache CouchDB</a> that is designed to run well within the browser.</p>
 
-### Status & Browser Support
+<p>PouchDB was created to help web developers build applications that work equally as well offline as they do online. It enables applications to store data locally while offline, and synchronise it with CouchDB and compatible servers when the application is back online, keeping the user's data in sync no matter where they next login.</p>
 
-PouchDB is currently in alpha preview. Currently tested in:
+<!--<ul id="news">
+  {% for post in site.posts %}
+    <li>
+      <small>{{ post.date | date_to_string }}</small>
+      <a href="{{ post.url }}">{{ post.title }}</a>
+    </li>
+  {% endfor %}
+</ul>-->
 
- * Firefox 12+
- * Chrome 19+
- * Opera 12+
- * Safari 5+
- * node.js
+</section>
+
+<section>
+
+{% highlight js linenos=table %}
+var db = new PouchDB('dbname');
+
+db.put({
+ _id: 'dave@gmail.com',
+ name: 'David',
+ age: 66
+});
+
+db.changes({
+  onChange: function() {
+    console.log('Ch-Ch-Changes');
+  }
+});
+
+db.replicate.to('http://example.com/mydb');
+{% endhighlight %}
+
+</section></div>
+
+
+<div id="home2">
+
+<section>
+  <h2>Cross Browser</h2>
+  Works in Firefox, Chrome, Opera, Safari, IE and Node.js
+</section>
+
+<section>
+  <h2>Lightweight</h2>
+  PouchDB is just a script tag and 65KB away in the browser, or<br /> <code>$ npm install pouchdb</code> away
+  in node.
+</section>
+
+<section id="learn-more">
+  <h2><a href="learn.html">Learn More &raquo;</a></h2>
+</section>
+
+</div>
